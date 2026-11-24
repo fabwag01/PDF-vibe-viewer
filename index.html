@@ -42,7 +42,7 @@ button{font:inherit;color:inherit}
 /* ---------- Leisten ---------- */
 .bar{background:var(--surface);border-bottom:1px solid var(--line);
   padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
-.row{display:flex;align-items:center;gap:6px;min-height:48px;flex-wrap:wrap;padding-block:4px}
+.row{display:flex;align-items:center;gap:6px;min-height:46px;flex-wrap:wrap;padding-block:3px}
 .row + .row{border-top:1px solid var(--line);min-height:44px}
 .spacer{flex:1}
 .grp{display:flex;align-items:center;gap:2px}
@@ -75,8 +75,8 @@ header .row:first-child > .spacer{flex-shrink:1;min-width:4px}
 .tool:hover{color:var(--ink)}
 .tool.on{background:var(--surface);color:var(--accent);box-shadow:0 1px 2px rgba(0,0,0,.12)}
 .opts{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.sw{width:26px;height:26px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
-.sw.on{box-shadow:0 0 0 2px var(--accent)}
+.sw{width:26px;height:26px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line),inset 0 0 0 1px rgba(128,128,128,.45);cursor:pointer;padding:0}
+.sw.on{box-shadow:0 0 0 2px var(--accent),inset 0 0 0 1px rgba(128,128,128,.45)}
 .wd{width:34px;height:32px;border-radius:8px;border:0;background:transparent;display:grid;place-items:center;cursor:pointer}
 .wd span{display:block;width:18px;border-radius:9px;background:var(--ink)}
 .wd.on{background:var(--accent-soft)}
@@ -115,7 +115,8 @@ header .row:first-child > .spacer{flex-shrink:1;min-width:4px}
 .side-actions .lbl{grid-column:1/-1;font-size:12px;color:var(--muted);text-align:center;padding:2px 0 4px}
 
 #viewport{flex:1;overflow:auto;position:relative;touch-action:none;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-#pages{display:flex;flex-direction:column;align-items:center;gap:20px;padding:24px 24px 120px;min-width:min-content}
+#pages{display:flex;flex-direction:column;align-items:center;gap:20px;min-width:min-content;
+  padding:calc(24px + var(--pal-t,0px)) calc(24px + var(--pal-r,0px)) calc(120px + var(--pal-b,0px)) calc(24px + var(--pal-l,0px))}
 .page{position:relative;background:#fff;box-shadow:var(--paper-shadow);flex:none}
 .page canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .page canvas.hl,.page canvas.live.blend{mix-blend-mode:multiply}
@@ -137,6 +138,54 @@ header .row:first-child > .spacer{flex-shrink:1;min-width:4px}
 .note .grip .mv{cursor:move;touch-action:none}
 .note .grip button:hover{background:var(--surface-2)}
 
+/* ---------- Werkzeugleiste (verschiebbar, rastet an den Rändern ein) ---------- */
+.pal{position:absolute;z-index:16;display:flex;align-items:center;gap:4px;padding:4px;background:var(--surface);border:1px solid var(--line);
+  border-radius:16px;box-shadow:0 6px 20px rgba(20,30,60,.14);max-width:calc(100% - 20px);max-height:calc(100% - 20px);touch-action:none}
+.pal .tools{background:transparent;padding:0;gap:1px}
+.pal .tool{width:38px;height:36px}
+.pal .opts{flex-wrap:nowrap;gap:3px}
+.pal .opts:empty{display:none}
+.pal .sw{width:24px;height:24px;margin:0 1px}
+.pal .wd{width:30px;height:30px}
+.pal .wd span{width:16px}
+.psep{width:1px;height:24px;background:var(--line);margin:0 3px;flex:none}
+.grip{width:22px;height:36px;border:0;background:transparent;color:var(--muted);display:grid;place-items:center;cursor:grab;border-radius:8px;touch-action:none;flex:none}
+.grip:hover{background:var(--surface-2)} .grip:active{cursor:grabbing}
+.grip:focus-visible,.pal .tool:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.pal.dragging{opacity:.92;box-shadow:0 14px 40px rgba(20,30,60,.28);transition:none}
+.pal:not(.dragging){transition:left .18s ease,top .18s ease}
+.pal .tool.more[hidden]{display:none}
+.pal .tool.more.on{background:var(--accent-soft);color:var(--accent)}
+.pal .tool.ic{width:32px;height:32px;border-radius:8px}
+.pal .tool.ic.on{background:var(--accent-soft);color:var(--accent);box-shadow:none}
+.pal[data-edge="left"],.pal[data-edge="right"]{flex-direction:column;overflow-y:auto}
+.pal[data-edge="left"] .tools,.pal[data-edge="right"] .tools,.pal[data-edge="left"] .opts,.pal[data-edge="right"] .opts{flex-direction:column}
+.pal[data-edge="left"] .psep,.pal[data-edge="right"] .psep{width:24px;height:1px;margin:3px 0}
+.pal[data-edge="left"] .grip,.pal[data-edge="right"] .grip{width:36px;height:22px;transform:rotate(90deg)}
+.pal[data-edge="left"] .sw,.pal[data-edge="right"] .sw{margin:1px 0}
+.pal .opts .sep{display:none}
+#palHint{position:absolute;z-index:15;background:var(--accent);opacity:.35;border-radius:6px;pointer-events:none}
+.pop{position:absolute;z-index:17;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 32px rgba(10,20,40,.18);
+  padding:10px;display:flex;flex-direction:column;gap:10px;align-items:flex-start;width:max-content;max-width:min(320px,calc(100% - 20px))}
+.pop .hint{max-width:280px;line-height:1.4}
+.pop .op{padding-left:0}
+.pop .op .lbl-op{display:inline!important}
+.pop .op input{width:130px!important}
+[data-look="glass"] .pal,[data-look="glass"] .pop{background:linear-gradient(180deg,var(--glass-sheen),transparent 46%),var(--glass-bar);
+  -webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);border:1px solid var(--glass-edge);box-shadow:var(--glass-shadow),inset 0 1px 0 var(--glass-hi)}
+[data-look="glass"] .pal{border-radius:999px;padding:5px 8px}
+[data-look="glass"] .pal[data-edge="left"],[data-look="glass"] .pal[data-edge="right"]{border-radius:26px;padding:8px 5px}
+[data-look="glass"] .pal .tools{background:transparent}
+[data-look="glass"] .pal .tool.ic.on,[data-look="glass"] .pal .tool.more.on{background:var(--glass-sel)}
+[data-look="glass"] .pop{border-radius:22px}
+@media (pointer:coarse){
+  .pal .tool{width:42px;height:40px}
+  .pal .sw{width:28px;height:28px}
+  .pal .wd{width:34px;height:34px}
+  .grip{width:26px;height:40px}
+  .pal[data-edge="left"] .grip,.pal[data-edge="right"] .grip{width:40px;height:26px}
+}
+
 /* ---------- Geodreieck & Messen ---------- */
 :root{ --geo-fill:rgba(205,224,255,.30); --geo-edge:rgba(45,79,211,.85); --geo-ink:#1E3A8A; --geo-ink2:#5A6FB8; --meas:#D9480F; }
 #geo{position:fixed;pointer-events:none;z-index:12;overflow:hidden;display:none}
@@ -152,10 +201,10 @@ header .row:first-child > .spacer{flex-shrink:1;min-width:4px}
 .geo-read{fill:var(--geo-ink);font-family:var(--font-ui);font-weight:700;text-anchor:middle;dominant-baseline:central;font-variant-numeric:tabular-nums}
 .geo-handle circle{fill:rgba(255,255,255,.9);stroke:var(--geo-edge);stroke-width:1.5}
 .geo-handle path{fill:none;stroke:var(--geo-ink);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
-#geoPanel{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:13;display:none;align-items:center;gap:2px;
+#geoPanel{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + var(--pal-b,0px) + env(safe-area-inset-bottom,0px));z-index:13;display:none;align-items:center;gap:2px;
   padding:4px 6px;border-radius:999px;background:var(--surface);border:1px solid var(--line);box-shadow:0 8px 24px rgba(10,20,40,.18)}
 #geoPanel.on{display:flex}
-.geo-on #toasts{bottom:calc(78px + env(safe-area-inset-bottom,0px))}
+.geo-on #toasts{bottom:calc(78px + var(--pal-b,0px) + env(safe-area-inset-bottom,0px))}
 #geoPanel .val{min-width:62px;text-align:center;font-variant-numeric:tabular-nums;font-weight:600;font-size:15px}
 .meas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
 .meas path{fill:none;stroke:var(--meas);stroke-width:1.6;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round}
@@ -217,7 +266,9 @@ header .row:first-child > .spacer{flex-shrink:1;min-width:4px}
 .fav.add b{color:var(--accent);font-weight:500}
 .star,.fav-on svg,[data-fav].on svg{color:#D99A00}
 .home-foot{margin:0;color:var(--muted);font-size:13px}
-.at-home #toolRow,.at-home #bSide,.at-home .split,.at-home #bPenOnly,.at-home .grp,.at-home .sep,.at-home #side{display:none!important}
+.pal .tool.once{position:relative}
+.pal .tool.once::after{content:"1";position:absolute;right:2px;bottom:2px;min-width:13px;height:13px;border-radius:7px;background:var(--accent);color:#fff;font:700 9px/13px system-ui,sans-serif;text-align:center;padding:0 2px}
+.at-home #palette,.at-home #optPop,.at-home #bSide,.at-home .split,.at-home #bPenOnly,.at-home .grp,.at-home .sep,.at-home #side{display:none!important}
 .at-home #viewport{visibility:hidden}
 #bHome.on{background:var(--accent-soft);color:var(--accent)}
 
@@ -292,7 +343,7 @@ header .row:first-child > .spacer{flex-shrink:1;min-width:4px}
 .field input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
 code.cp{display:block;background:var(--surface-2);border-radius:8px;padding:8px 10px;font-size:12.5px;word-break:break-all;font-family:ui-monospace,Consolas,monospace}
 
-#toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:80;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:calc(100% - 32px)}
+#toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + var(--pal-b,0px) + env(safe-area-inset-bottom,0px));z-index:80;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:calc(100% - 32px)}
 .toast{background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:10px;font-size:13.5px;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:560px;animation:tin .18s ease-out}
 .toast.err{background:var(--danger);color:#fff}
 @keyframes tin{from{transform:translateY(8px);opacity:0}}
@@ -344,7 +395,7 @@ code.cp{display:block;background:var(--surface-2);border-radius:8px;padding:8px 
 [data-look="glass"] .bar{background:linear-gradient(180deg,var(--glass-sheen),transparent 46%),var(--glass-bar);position:absolute;z-index:30;top:10px;left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));
   border-radius:26px;padding-left:12px;padding-right:12px}
 [data-look="glass"] .row + .row{border-top-color:var(--glass-inset)}
-[data-look="glass"] #pages{padding-top:calc(var(--hdr-h,112px) + 30px)}
+[data-look="glass"] #pages{padding-top:calc(var(--hdr-h,56px) + 24px + var(--pal-t,0px))}
 [data-look="glass"] .home-in{padding-top:calc(var(--hdr-h,60px) + 34px)}
 [data-look="glass"] #side{margin:calc(var(--hdr-h,112px) + 22px) 0 12px max(10px,env(safe-area-inset-left,0px));border-radius:24px;overflow:hidden;padding-left:0}
 [data-look="glass"] .side-actions{border-top-color:var(--glass-inset)}
@@ -404,9 +455,11 @@ code.cp{display:block;background:var(--surface-2);border-radius:8px;padding:8px 
 /* Touch (iPad): obere Leiste mit mehr Abstand zum Bildschirmrand und größeren Zielen */
 @media (pointer:coarse){
   .bar{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-  header .row:first-child{min-height:56px;padding-block:8px;gap:8px}
-  .row + .row{padding-block:6px}
-  [data-look="glass"] .bar{top:14px;padding-left:16px;padding-right:16px;border-radius:28px}
+  header .row:first-child{min-height:50px;padding-block:5px;gap:6px}
+  header .btn{height:38px} header .btn.icon{width:38px}
+  [data-look="glass"] .bar{top:10px;padding-left:14px;padding-right:14px;border-radius:26px}
+  .tool{width:42px;height:40px}
+  .sw{width:28px;height:28px}
 }
 /* Als Web-App vom Home-Bildschirm: Abstand zur Statusleiste bzw. zu den Fenstersymbolen von iPadOS */
 @media (display-mode:standalone){
@@ -432,6 +485,7 @@ code.cp{display:block;background:var(--surface-2);border-radius:8px;padding:8px 
       <button class="btn outline" id="bOpen" aria-haspopup="menu"><span data-i="open"></span><span class="hide-xs">Öffnen</span><span data-i="chev" data-s="14"></span></button>
       <div class="docname"><b id="docName">–</b><small id="docInfo"><span class="dot"></span>Kein Dokument</small></div>
       <div class="spacer"></div>
+      <span class="pageind hide-s" id="pageInd">–</span>
       <button class="chip" id="bPenOnly" title="Nur der Stift zeichnet, Finger scrollt und zoomt">Nur Stift</button>
       <div class="grp">
         <button class="btn icon" id="bUndo" title="Rückgängig (Strg+Z)" aria-label="Rückgängig" data-i="undo"></button>
@@ -448,21 +502,6 @@ code.cp{display:block;background:var(--surface-2);border-radius:8px;padding:8px 
         <button class="btn primary" id="bSave"><span data-i="save"></span><span id="saveLbl">Speichern</span></button>
         <button class="btn primary" id="bSaveMenu" aria-label="Weitere Speicheroptionen" data-i="chev" data-s="14"></button>
       </div>
-    </div>
-    <div class="row" id="toolRow">
-      <div class="tools" role="toolbar" aria-label="Werkzeuge">
-        <button class="tool" data-tool="hand" title="Hand / Scrollen (V)" aria-label="Hand" data-i="hand"></button>
-        <button class="tool" data-tool="pen" title="Stift (P)" aria-label="Stift" data-i="pen"></button>
-        <button class="tool" data-tool="hl" title="Textmarker (H)" aria-label="Textmarker" data-i="hl"></button>
-        <button class="tool" data-tool="eraser" title="Radierer (E)" aria-label="Radierer" data-i="eraser"></button>
-        <button class="tool" data-tool="text" title="Notiz (T)" aria-label="Notiz" data-i="text"></button>
-        <button class="tool" data-tool="measure" title="Messen: Länge und Winkel (M)" aria-label="Messen" data-i="measure"></button>
-      </div>
-      <div class="tools"><button class="tool" id="bGeo" title="Geodreieck ein/aus (G)" aria-label="Geodreieck" aria-pressed="false" data-i="geo"></button></div>
-      <div class="sep"></div>
-      <div class="opts" id="opts"></div>
-      <div class="spacer"></div>
-      <span class="pageind hide-s" id="pageInd">–</span>
     </div>
   </header>
 
@@ -483,6 +522,24 @@ code.cp{display:block;background:var(--surface-2);border-radius:8px;padding:8px 
       </div>
     </aside>
     <div id="viewport"><div id="pages"></div></div>
+    <!-- Werkzeugleiste: am Griff verschieben, rastet an jedem Rand ein -->
+    <div id="palette" class="pal" data-edge="top" role="toolbar" aria-label="Werkzeuge">
+      <button class="grip" id="palGrip" title="Werkzeugleiste verschieben (ziehen) oder andocken (antippen)" aria-label="Werkzeugleiste verschieben oder andocken" aria-haspopup="menu"><svg viewBox="0 0 10 16" width="10" height="16" aria-hidden="true"><g fill="currentColor"><circle cx="2.5" cy="3" r="1.4"/><circle cx="7.5" cy="3" r="1.4"/><circle cx="2.5" cy="8" r="1.4"/><circle cx="7.5" cy="8" r="1.4"/><circle cx="2.5" cy="13" r="1.4"/><circle cx="7.5" cy="13" r="1.4"/></g></svg></button>
+      <div class="tools">
+        <button class="tool" data-tool="hand" title="Hand / Scrollen (V)" aria-label="Hand" data-i="hand"></button>
+        <button class="tool" data-tool="pen" title="Stift (P)" aria-label="Stift" data-i="pen"></button>
+        <button class="tool" data-tool="hl" title="Textmarker (H)" aria-label="Textmarker" data-i="hl"></button>
+        <button class="tool" data-tool="eraser" title="Radierer (E)" aria-label="Radierer" data-i="eraser"></button>
+        <button class="tool" data-tool="text" title="Notiz (T)" aria-label="Notiz" data-i="text"></button>
+        <button class="tool" data-tool="measure" title="Messen: Länge und Winkel (M)" aria-label="Messen" data-i="measure"></button>
+        <button class="tool" id="bGeo" title="Geodreieck ein/aus (G)" aria-label="Geodreieck" aria-pressed="false" data-i="geo"></button>
+      </div>
+      <div class="psep"></div>
+      <div class="opts" id="opts"></div>
+      <button class="tool more" id="bOptMore" title="Weitere Optionen" aria-label="Weitere Optionen" aria-haspopup="dialog" aria-expanded="false" data-i="dots"></button>
+    </div>
+    <div id="optPop" class="pop" hidden role="dialog" aria-label="Weitere Optionen"></div>
+    <div id="palHint" hidden></div>
     <section id="home" hidden aria-label="Übersicht">
       <div class="home-in">
         <div class="home-top"><h1>Übersicht</h1><button class="btn outline" id="hBack" hidden>Zurück zum Dokument</button></div>
@@ -584,6 +641,8 @@ const ICON = {
   drive: '<rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 12h.01M11 12h6"/>',
   compress: '<path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8z"/><path d="M14 3v5h5M12 10v3m0 0l-2-2m2 2l2-2M12 18v-3m0 0l-2 2m2-2l2 2"/>',
   chevR: '<path d="M9 6l6 6-6 6"/>',
+  dots: '<circle cx="5.5" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="18.5" cy="12" r="1.3" fill="currentColor"/>',
+  angle: '<path d="M4 19h16M4 19L15 6"/><path d="M10.5 19a6.5 6.5 0 0 0-2-4.7"/>',
   measure: '<path d="M3.5 16.5L16.5 3.5l4 4-13 13z"/><path d="M7 13l2 2M10 10l1.5 1.5M13 7l2 2"/>',
   geo: '<path d="M3 19.5h18L12 7z"/><path d="M8.6 19.5a3.4 3.4 0 0 1 6.8 0"/>',
   shapes: '<circle cx="8" cy="8" r="4.5"/><path d="M13 20l4-7 4 7z"/><rect x="3.5" y="14" width="6" height="6" rx=".5"/>',
@@ -610,6 +669,7 @@ const S = {
   eraser: { w: 14 },
   penOnly: store.get("penOnly", false),
   penSeen: false,
+  eraserOnce: store.get("eraserOnce", true) !== false, returnTool: null,
   scale: 1.2, cur: 0, dirty: false,
   undo: [], redo: [], editing: false, sel: new Set(), home: false
 };
@@ -1029,6 +1089,10 @@ viewport.addEventListener("pointerdown", e => {
     touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
     // Handballen beim Schreiben: Ein laufender Stiftstrich hat Vorrang, Berührungen werden ignoriert
     if (G && G.pen) return;
+    // Handballen erkennen: große Auflagefläche, oder ein einzelner Finger direkt nach einem Stiftstrich
+    if (Math.max(e.width || 0, e.height || 0) > 50 || (S.penSeen && touches.size === 1 && performance.now() - (S.lastPenUp || 0) < 350)) {
+      touches.delete(e.pointerId); return;
+    }
     // Geodreieck: ein Finger verschiebt, zwei Finger drehen
     if (touches.size === 2 && G && G.type === "geo") { startGeo2(); return; }
     if (touches.size === 1 && gdHit(e.clientX, e.clientY)) { startGeo(e, gdHit(e.clientX, e.clientY)); return; }
@@ -1049,6 +1113,8 @@ viewport.addEventListener("pointerdown", e => {
     const st = tool === "pen" ? S.pen : S.hl;
     G = { type: "draw", pen: e.pointerType === "pen", id: e.pointerId, p, pageEl, s: { t: tool, c: st.c, w: st.w, ...(tool === "hl" ? { o: S.hl.o } : {}), pr: e.pointerType === "pen", p: [x, y, e.pressure || .5] }, straight: tool === "hl" && S.hl.straight,
           anchor: [e.clientX, e.clientY] };
+    // Stift: iPadOS meldet am Aufsetzen oft Druck 0 – dann wird der erste echte Wert nachgetragen
+    if (G.pen) { const pr0 = e.pressure > 0 ? e.pressure : 0.5; G.s.p[2] = +pr0.toFixed(2); G.pZero = !(e.pressure > 0); G.lastP = pr0; G.sx = x; G.sy = y; G.raw = [x, y]; }
     // am Geodreieck anlegen: Strich läuft genau entlang der Kante
     G.rule = gdSnapEdge(e.clientX, e.clientY);
     if (G.rule) { const [rx, ry] = toPagePt(projOnRule(G.rule, e.clientX, e.clientY), pageEl, p); G.s.p = [rx, ry, .5]; G.s.sh = true; G.s.pr = false; }
@@ -1101,11 +1167,23 @@ viewport.addEventListener("pointermove", e => {
         const sx = a[0], sy = a[1]; let ey = y; if (Math.abs(y - sy) < Math.abs(x - sx) * 0.2) ey = sy;
         G.s.p = [sx, sy, a[2], x, ey, ev.pressure || .5];
       } else {
+        let px = x, py = y, pr = ev.pressure || .5;
+        if (G.pen) {
+          // langsames Schreiben: leichte Glättung gegen Zittern; schnelle Bewegung folgt direkt
+          const k = clamp(Math.hypot(x - G.sx, y - G.sy) * S.scale / 6, 0.35, 1);
+          px = G.sx + (x - G.sx) * k; py = G.sy + (y - G.sy) * k; G.sx = px; G.sy = py; G.raw = [x, y];
+          let raw = ev.pressure; if (!(raw > 0)) raw = G.lastP;
+          if (G.pZero && ev.pressure > 0) { a[2] = +ev.pressure.toFixed(2); G.pZero = false; }
+          pr = G.lastP + (raw - G.lastP) * 0.45; G.lastP = pr;
+        }
         const lx = a[a.length - 3], ly = a[a.length - 2];
-        if (Math.hypot(x - lx, y - ly) < minD) continue;
-        a.push(+x.toFixed(2), +y.toFixed(2), +(ev.pressure || .5).toFixed(2));
+        if (Math.hypot(px - lx, py - ly) < minD) continue;
+        a.push(+px.toFixed(2), +py.toFixed(2), +pr.toFixed(2));
       }
     }
+    // Vorhersage der nächsten Punkte (wo der Browser sie liefert): Linie folgt dem Stift ohne spürbare Verzögerung
+    G.pred = null;
+    if (G.pen && !G.straight && e.getPredictedEvents) { const pe = e.getPredictedEvents(); if (pe && pe.length) G.pred = pe.slice(-2).map(ev => toPagePt(ev, G.pageEl, G.p)); }
     requestDrawLive();
   } else if (G.type === "erase") {
     for (const ev of (evs.length ? evs : [e])) { const [x, y] = toPagePt(ev, G.pageEl, G.p); eraseAt(x, y); }
@@ -1125,13 +1203,20 @@ function endPointer(e) {
   if (g.type === "draw") {
     clearTimeout(holdT);
     const v = views.get(g.p.uid); const lc = v.liveC.getContext("2d"); lc.setTransform(1, 0, 0, 1, 0, 0); lc.clearRect(0, 0, v.liveC.width, v.liveC.height);
+    if (g.pen) S.lastPenUp = performance.now();
     if (e.type === "pointercancel" && !(g.pen && g.s.p.length >= 6)) return;
-    if (g.rule && g.s.p.length < 6) return;   // nur angetippt, keine Linie gezogen
+    if (g.rule && g.s.p.length < 6) return;
+    // Ende genau dort, wo der Stift abgehoben wurde (die Glättung hinkt minimal nach)
+    if (g.pen && g.raw && !g.rule && !g.shaped && !g.straight) {
+      const a = g.s.p, n = a.length; if (Math.hypot(g.raw[0] - a[n - 3], g.raw[1] - a[n - 2]) > 0.2) a.push(+g.raw[0].toFixed(2), +g.raw[1].toFixed(2), a[n - 1]);
+    }   // nur angetippt, keine Linie gezogen
     // Formen-Automatik: jeder Stiftstrich wird geprüft
     if (g.s.t === "pen" && !g.rule && !g.shaped && S.pen.shapes) { const shape = Shapes.recognize(strokePts(g.s)); if (shape) applyShape(g.s, shape); }
     pushUndo(); g.p.strokes.push(g.s); drawInk(g.p); setDirty(true); thumbDirty(g.p);
   } else if (g.type === "erase") {
     if (g.hit) { pushUndo(g.snap); setDirty(true); thumbDirty(g.p); }
+    // Radierer „einmal“: nach dem Abheben zurück zum vorherigen Stift
+    if (S.tool === "eraser" && S.returnTool && e.type !== "pointercancel") { const t = S.returnTool; S.returnTool = null; setTool(t); }
   } else if (g.type === "tap") {
     if (Math.hypot(e.clientX - g.x0, e.clientY - g.y0) < 8 && !S.skipNoteTap) createNote(g.p, g.pt[0], g.pt[1]);
   }
@@ -1157,7 +1242,9 @@ function requestDrawLive() { if (!liveRaf) liveRaf = requestAnimationFrame(() =>
 function drawLive() {
   if (!G || G.type !== "draw") return;
   const v = views.get(G.p.uid); if (!v.liveC.width) return;
-  const ctx = ctxFor(v.liveC, G.p); ctx.clearRect(0, 0, 1e5, 1e5); drawStroke(ctx, G.s);
+  const ctx = ctxFor(v.liveC, G.p); ctx.clearRect(0, 0, 1e5, 1e5);
+  if (G.pred && G.pred.length && !G.s.sh) { const lp = G.s.p[G.s.p.length - 1]; drawStroke(ctx, { ...G.s, p: G.s.p.concat(...G.pred.map(([x, y]) => [x, y, lp])) }); }
+  else drawStroke(ctx, G.s);
 }
 function abortStroke() {
   clearTimeout(holdT);
@@ -1585,10 +1672,14 @@ function setScale(ns, cx, cy, live) {
   viewport.scrollLeft = cxC * r - ax; viewport.scrollTop = cyC * r - ay;
   if (!live) scheduleRerender(); else { clearTimeout(rerenderT); rerenderT = setTimeout(() => S.pages.forEach(renderPage), 350); }
 }
+function fitScale() {
+  const maxW = Math.max(...S.pages.map(p => dims(p)[0]));
+  const cs = getComputedStyle(document.documentElement), side = (parseFloat(cs.getPropertyValue("--pal-l")) || 0) + (parseFloat(cs.getPropertyValue("--pal-r")) || 0);
+  return clamp((viewport.clientWidth - 48 - side) / maxW, 0.35, 3);
+}
 function fitWidth() {
   if (!S.pages.length) return;
-  const maxW = Math.max(...S.pages.map(p => dims(p)[0]));
-  S.scale = clamp((viewport.clientWidth - 48) / maxW, 0.35, 3);
+  S.scale = fitScale();
   layout(); scheduleRerender();
 }
 viewport.addEventListener("wheel", e => {
@@ -2563,68 +2654,179 @@ function updateChrome() {
   $("#bPenOnly").innerHTML = (S.penOnly ? svg("check", 14) : "") + "Nur Stift";
   renderOpts(); updatePageInd(); updateUndo(); gdRender();
 }
+/* Optionen des Werkzeugs: Farben und Stärken direkt in der Leiste, alles Weitere im ⋯-Fenster */
 function renderOpts() {
-  const o = $("#opts"); o.innerHTML = "";
-  const t = S.tool;
+  const o = $("#opts"), pop = $("#optPop"); o.innerHTML = ""; pop.innerHTML = "";
+  const t = S.tool, el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt) e.textContent = txt; return e; };
+  const hint = txt => pop.append(el("span", "hint", txt));
   if (t === "pen" || t === "hl") {
     const st = S[t];
     PALETTE[t].forEach(c => {
-      const b = document.createElement("button"); b.className = "sw" + (st.c === c ? " on" : ""); b.style.background = c; b.setAttribute("aria-label", "Farbe " + c);
+      const b = el("button", "sw" + (st.c === c ? " on" : "")); b.style.background = c; b.setAttribute("aria-label", "Farbe " + c); b.setAttribute("aria-pressed", st.c === c);
       b.onclick = () => { st.c = c; store.set(t, st); renderOpts(); }; o.append(b);
     });
-    const sep = document.createElement("div"); sep.className = "sep"; o.append(sep);
     WIDTHS[t].forEach((w, i) => {
-      const b = document.createElement("button"); b.className = "wd" + (st.w === w ? " on" : ""); b.setAttribute("aria-label", ["Fein", "Mittel", "Breit"][i]);
+      const b = el("button", "wd" + (st.w === w ? " on" : "")); b.setAttribute("aria-label", ["Fein", "Mittel", "Breit"][i]); b.setAttribute("aria-pressed", st.w === w);
       b.innerHTML = `<span style="height:${t === "hl" ? 4 + i * 3 : 1.5 + i * 1.5}px"></span>`;
       b.onclick = () => { st.w = w; store.set(t, st); renderOpts(); }; o.append(b);
     });
     if (t === "pen") {
-      const b = document.createElement("button"); b.className = "chip" + (st.shapes ? " on" : ""); b.id = "chipShapes";
-      b.innerHTML = svg("shapes", 16) + "<span>Formen</span>";
-      b.title = "Jeder Strich wird zu einer sauberen Form, wenn er einer ähnelt. Ohne Schalter: am Ende des Strichs den Stift kurz halten.";
+      const b = el("button", "chip" + (st.shapes ? " on" : "")); b.id = "chipShapes";
+      b.innerHTML = svg("shapes", 16) + "<span>Formen automatisch erkennen</span>";
       b.onclick = () => { st.shapes = !st.shapes; store.set("pen", st); renderOpts(); toast(st.shapes ? "Formen werden automatisch erkannt." : "Formen nur noch per Halten am Strichende."); };
-      o.append(b);
-    }
-    if (t === "hl") {
-      const op = document.createElement("label"); op.className = "op"; op.title = "Gilt für neue Markierungen";
+      pop.append(b); hint("Ohne Schalter: am Ende eines Strichs den Stift kurz halten, dann wird die Form erkannt.");
+    } else {
+      const op = el("label", "op"); op.title = "Gilt für neue Markierungen";
       op.innerHTML = `<span class="lbl-op">Deckkraft</span><input type="range" id="hlOpacity" min="10" max="100" step="5" aria-label="Deckkraft des Textmarkers"><output for="hlOpacity"></output><span class="op-prev" aria-hidden="true"><i></i>Abc</span>`;
       const rng = $("input", op), outp = $("output", op), prev = $(".op-prev i", op);
       const show = () => { outp.textContent = rng.value + " %"; prev.style.background = st.c; prev.style.opacity = rng.value / 100; };
       rng.value = Math.round(st.o * 100); show();
       rng.addEventListener("input", () => { st.o = rng.value / 100; show(); });
       rng.addEventListener("change", () => store.set("hl", st));
-      o.append(op);
-      const b = document.createElement("button"); b.className = "chip" + (st.straight ? " on" : ""); b.textContent = "Gerade Linien";
-      b.title = "Markierungen rasten waagrecht ein"; b.onclick = () => { st.straight = !st.straight; store.set("hl", st); renderOpts(); }; o.append(b);
+      pop.append(op);
+      const b = el("button", "chip" + (st.straight ? " on" : ""), "Gerade Linien"); b.title = "Markierungen rasten waagrecht ein";
+      b.onclick = () => { st.straight = !st.straight; store.set("hl", st); renderOpts(); }; pop.append(b);
     }
   } else if (t === "eraser") {
-    const l = document.createElement("span"); l.style.cssText = "color:var(--muted);font-size:13px"; l.textContent = "Löscht ganze Striche"; o.append(l);
     WIDTHS.eraser.forEach((w, i) => {
-      const b = document.createElement("button"); b.className = "wd" + (S.eraser.w === w ? " on" : ""); b.setAttribute("aria-label", ["Klein", "Mittel", "Groß"][i]);
+      const b = el("button", "wd" + (S.eraser.w === w ? " on" : "")); b.setAttribute("aria-label", ["Klein", "Mittel", "Groß"][i]);
       b.innerHTML = `<span style="height:${6 + i * 4}px;width:${6 + i * 4}px;border-radius:50%"></span>`;
       b.onclick = () => { S.eraser.w = w; renderOpts(); }; o.append(b);
     });
-  } else if (t === "text") {
-    const l = document.createElement("span"); l.style.cssText = "color:var(--muted);font-size:13px"; l.textContent = "Auf die Seite tippen, um eine Notiz zu setzen"; o.append(l);
+    const b = el("button", "chip" + (S.eraserOnce ? " on" : "")); b.id = "chipEraserOnce";
+    b.innerHTML = (S.eraserOnce ? svg("check", 14) : "") + "<span>Nach dem Radieren zurück zum Stift</span>";
+    b.onclick = () => { S.eraserOnce = !S.eraserOnce; store.set("eraserOnce", S.eraserOnce); if (!S.eraserOnce) { S.returnTool = null; setTool("eraser"); } renderOpts(); };
+    pop.append(b); hint("Radierer einmal antippen: ein Strich radieren, dann geht es mit dem Stift weiter. Zweimal antippen: Radierer bleibt aktiv.");
   } else if (t === "measure") {
-    const seg = document.createElement("div"); seg.className = "seg"; seg.setAttribute("role", "group"); seg.setAttribute("aria-label", "Messart");
-    [["len", "Länge"], ["ang", "Winkel"]].forEach(([k, lbl]) => {
-      const b = document.createElement("button"); b.textContent = lbl; b.dataset.m = k; b.className = MEAS.mode === k ? "on" : ""; b.setAttribute("aria-pressed", MEAS.mode === k);
-      b.onclick = () => { MEAS.mode = k; store.set("measMode", k); MEAS.cur = null; measRender(); renderOpts(); }; seg.append(b);
+    [["len", "measure", "Länge messen"], ["ang", "angle", "Winkel messen"]].forEach(([k, ic, lbl]) => {
+      const b = el("button", "tool ic" + (MEAS.mode === k ? " on" : "")); b.dataset.m = k; b.title = lbl; b.setAttribute("aria-label", lbl); b.setAttribute("aria-pressed", MEAS.mode === k);
+      b.innerHTML = svg(ic, 18);
+      b.onclick = () => { MEAS.mode = k; store.set("measMode", k); MEAS.cur = null; measRender(); renderOpts(); }; o.append(b);
     });
-    o.append(seg);
-    const d = document.createElement("button"); d.className = "chip" + (MEAS.draw ? " on" : ""); d.id = "chipMeasDraw";
-    d.innerHTML = (MEAS.draw ? svg("check", 14) : "") + "<span>Einzeichnen</span>"; d.title = "Das Maß als Bemaßung in die Seite schreiben";
-    d.onclick = () => { MEAS.draw = !MEAS.draw; store.set("measDraw", MEAS.draw); renderOpts(); }; o.append(d);
-    const l = document.createElement("span"); l.className = "hint";
-    l.textContent = MEAS.mode === "len" ? "Von Punkt zu Punkt ziehen" : "Vom Scheitel den ersten Schenkel ziehen, dann den zweiten Punkt setzen"; o.append(l);
-  } else {
-    const l = document.createElement("span"); l.style.cssText = "color:var(--muted);font-size:13px"; l.textContent = "Scrollen und Notizen bearbeiten"; o.append(l);
+    const d = el("button", "chip" + (MEAS.draw ? " on" : "")); d.id = "chipMeasDraw";
+    d.innerHTML = (MEAS.draw ? svg("check", 14) : "") + "<span>Maß einzeichnen</span>"; d.title = "Das Maß als Bemaßung in die Seite schreiben";
+    d.onclick = () => { MEAS.draw = !MEAS.draw; store.set("measDraw", MEAS.draw); renderOpts(); }; pop.append(d);
+    hint(MEAS.mode === "len" ? "Länge: von Punkt zu Punkt ziehen." : "Winkel: vom Scheitel den ersten Schenkel ziehen, dann den zweiten Punkt setzen.");
   }
+  const more = $("#bOptMore"); more.hidden = !pop.childElementCount;
+  if (more.hidden) closeOptPop();
+  placePalette();
 }
-function setTool(t) { if (t !== S.tool) { MEAS.cur = null; measRender(); } S.tool = t; updateChrome(); }
+function openOptPop() { const pop = $("#optPop"); if (!pop.childElementCount) return; pop.hidden = false; $("#bOptMore").classList.add("on"); $("#bOptMore").setAttribute("aria-expanded", "true"); placePalette();
+  setTimeout(() => document.addEventListener("pointerdown", popAway, true), 0); }
+function closeOptPop() { $("#optPop").hidden = true; $("#bOptMore").classList.remove("on"); $("#bOptMore").setAttribute("aria-expanded", "false"); document.removeEventListener("pointerdown", popAway, true); }
+function popAway(e) { if (!e.target.closest("#optPop,#bOptMore")) closeOptPop(); }
 
-$$(".tool[data-tool]").forEach(b => b.onclick = () => setTool(b.dataset.tool));
+/* ---------- Werkzeugleiste verschieben und andocken ---------- */
+const PAL = { edge: ["top", "bottom", "left", "right"].includes(store.get("palEdge")) ? store.get("palEdge") : "top", pos: clamp(+store.get("palPos", 0.5) || 0.5, 0, 1) };
+// freie Fläche für die Leiste: der sichtbare Seitenbereich ohne Kopfleiste (im Glas-Design schwebt diese darüber)
+function palArea() {
+  const main = $("#main").getBoundingClientRect(), vr = viewport.getBoundingClientRect(), hdr = $("header.bar").getBoundingClientRect();
+  let T = vr.top - main.top; const L = vr.left - main.left, R = L + vr.width, B = T + vr.height;
+  if (document.documentElement.dataset.look === "glass") T = Math.max(T, hdr.bottom - main.top);
+  return { L, T, R, B, main };
+}
+function placePalette() {
+  const pal = $("#palette"); if (!pal) return;
+  pal.dataset.edge = PAL.edge;
+  const root = document.documentElement.style, off = !S.pages.length || S.home;
+  ["t", "b", "l", "r"].forEach(k => root.setProperty("--pal-" + k, "0px"));
+  if (off || pal.classList.contains("dragging")) { if (off) placePop(); return; }
+  const a = palArea(), m = 10, w = pal.offsetWidth, h = pal.offsetHeight;
+  let x, y;
+  if (PAL.edge === "top" || PAL.edge === "bottom") {
+    x = a.L + m + Math.max(0, a.R - a.L - 2 * m - w) * PAL.pos; y = PAL.edge === "top" ? a.T + m : a.B - m - h;
+    root.setProperty("--pal-" + PAL.edge[0], (h + m + 6) + "px");
+  } else {
+    y = a.T + m + Math.max(0, a.B - a.T - 2 * m - h) * PAL.pos; x = PAL.edge === "left" ? a.L + m : a.R - m - w;
+    root.setProperty("--pal-" + PAL.edge[0], (w + m + 6) + "px");
+  }
+  pal.style.left = Math.round(x) + "px"; pal.style.top = Math.round(y) + "px";
+  placePop();
+}
+function placePop() {
+  const pop = $("#optPop"); if (pop.hidden) return;
+  const pal = $("#palette"), a = palArea(), m = 8;
+  const px = pal.offsetLeft, py = pal.offsetTop, pw = pal.offsetWidth, ph = pal.offsetHeight, w = pop.offsetWidth, h = pop.offsetHeight;
+  let x, y;
+  if (PAL.edge === "top") { x = px + pw - w; y = py + ph + m; }
+  else if (PAL.edge === "bottom") { x = px + pw - w; y = py - h - m; }
+  else if (PAL.edge === "left") { x = px + pw + m; y = py + ph - h; }
+  else { x = px - w - m; y = py + ph - h; }
+  pop.style.left = Math.round(clamp(x, a.L + m, a.R - w - m)) + "px"; pop.style.top = Math.round(clamp(y, a.T + m, a.B - h - m)) + "px";
+}
+function setPalEdge(edge, pos = 0.5) {
+  // war die Seite auf Breite eingepasst, bleibt sie es auch mit der Leiste am neuen Rand
+  const live = S.pages.length && !S.home, wasFit = live && Math.abs(S.scale - fitScale()) < 0.005;
+  PAL.edge = edge; PAL.pos = pos; store.set("palEdge", edge); store.set("palPos", pos);
+  placePalette();
+  if (wasFit) fitWidth();
+  gdRender();
+}
+// nächster Rand und Position entlang des Randes für einen Bildschirmpunkt
+function palTarget(cx, cy) {
+  const a = palArea(), x = cx - a.main.left, y = cy - a.main.top;
+  const d = { top: Math.abs(y - a.T), bottom: Math.abs(a.B - y), left: Math.abs(x - a.L), right: Math.abs(a.R - x) };
+  const edge = Object.keys(d).sort((p, q) => d[p] - d[q])[0];
+  const pos = edge === "top" || edge === "bottom" ? (x - a.L) / Math.max(1, a.R - a.L) : (y - a.T) / Math.max(1, a.B - a.T);
+  return { edge, pos: clamp(pos, 0, 1), a };
+}
+function showPalHint(t) {
+  const hn = $("#palHint"); if (!t) { hn.hidden = true; return; }
+  const { a, edge } = t, th = 6; hn.hidden = false;
+  const r = edge === "top" ? [a.L + 10, a.T + 4, a.R - a.L - 20, th] : edge === "bottom" ? [a.L + 10, a.B - 4 - th, a.R - a.L - 20, th]
+    : edge === "left" ? [a.L + 4, a.T + 10, th, a.B - a.T - 20] : [a.R - 4 - th, a.T + 10, th, a.B - a.T - 20];
+  Object.assign(hn.style, { left: r[0] + "px", top: r[1] + "px", width: r[2] + "px", height: r[3] + "px" });
+}
+(() => {
+  const grip = $("#palGrip"), pal = $("#palette"); let drag = null;
+  grip.addEventListener("pointerdown", e => {
+    e.preventDefault(); e.stopPropagation(); grip.setPointerCapture(e.pointerId); closeOptPop();
+    drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, ox: pal.offsetLeft, oy: pal.offsetTop, moved: false };
+  });
+  grip.addEventListener("pointermove", e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+    if (!drag.moved && Math.hypot(dx, dy) < 6) return;
+    if (!drag.moved) { drag.moved = true; pal.classList.add("dragging"); }
+    pal.style.left = (drag.ox + dx) + "px"; pal.style.top = (drag.oy + dy) + "px";
+    showPalHint(palTarget(e.clientX, e.clientY));
+  });
+  const end = e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const d = drag; drag = null; showPalHint(null); pal.classList.remove("dragging");
+    if (!d.moved) {   // Antippen: Andocken per Menü
+      if (e.type === "pointercancel") return;
+      openMenu(grip, [{ head: "Werkzeugleiste andocken" },
+        ...[["top", "Oben"], ["bottom", "Unten"], ["left", "Links"], ["right", "Rechts"]].map(([k, l]) => ({ label: l, icon: PAL.edge === k ? "check" : "none", run: () => setPalEdge(k) }))]);
+      return;
+    }
+    const t = palTarget(e.clientX, e.clientY); setPalEdge(t.edge, t.pos);
+  };
+  grip.addEventListener("pointerup", end); grip.addEventListener("pointercancel", end);
+  grip.addEventListener("keydown", e => {   // Tastatur: Pfeiltasten docken an
+    const k = { ArrowUp: "top", ArrowDown: "bottom", ArrowLeft: "left", ArrowRight: "right" }[e.key];
+    if (k) { e.preventDefault(); setPalEdge(k); }
+  });
+  // Antippen innerhalb der Leiste darf keine Zeichengeste auslösen
+  pal.addEventListener("pointerdown", e => e.stopPropagation());
+  $("#optPop").addEventListener("pointerdown", e => e.stopPropagation());
+  $("#bOptMore").onclick = () => $("#optPop").hidden ? openOptPop() : closeOptPop();
+  try { new ResizeObserver(() => placePalette()).observe(pal); new ResizeObserver(() => placePalette()).observe(viewport); } catch {}
+  addEventListener("resize", () => placePalette());
+})();
+function setTool(t, fromUser) {
+  if (t !== S.tool) { MEAS.cur = null; measRender(); }
+  if (t === "eraser" && fromUser) {
+    // Radierer antippen: einmal radieren, dann zurück zum Stift/Textmarker. Nochmal antippen: Radierer bleibt.
+    if (S.tool === "eraser") S.returnTool = null;
+    else S.returnTool = S.eraserOnce && ["pen", "hl"].includes(S.tool) ? S.tool : null;
+  } else if (t !== "eraser") S.returnTool = null;
+  S.tool = t; updateChrome();
+  const eb = $('.tool[data-tool="eraser"]'); if (eb) { eb.classList.toggle("once", S.tool === "eraser" && !!S.returnTool); eb.title = S.tool === "eraser" && S.returnTool ? "Radierer – einmal (nochmal tippen: bleibt aktiv)" : "Radierer (E)"; }
+}
+
+$$(".tool[data-tool]").forEach(b => b.onclick = () => setTool(b.dataset.tool, true));
 $("#bGeo").onclick = () => { gdToggle(); $("#bGeo").setAttribute("aria-pressed", GD.on); };
 $("#gRotL").onclick = () => gdRotateBy(-15); $("#gRotR").onclick = () => gdRotateBy(15);
 $("#gZero").onclick = () => { GD.ang = 0; gdRender(); };
@@ -2681,6 +2883,7 @@ try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", sync
 function measureHeader() {
   const h = $("header.bar").offsetHeight;
   if (h) document.documentElement.style.setProperty("--hdr-h", h + "px");
+  if (typeof placePalette === "function") placePalette();
 }
 try { new ResizeObserver(measureHeader).observe($("header.bar")); } catch {}
 $("#bLook").onclick = e => {
@@ -2714,7 +2917,7 @@ document.addEventListener("keydown", e => {
   else if (mod && e.key === "-") { e.preventDefault(); setScale(S.scale / 1.2); }
   else if (!mod && !e.altKey) {
     const m = { v: "hand", p: "pen", h: "hl", e: "eraser", t: "text", m: "measure" }[e.key.toLowerCase()];
-    if (m) setTool(m);
+    if (m) setTool(m, true);
     if (e.key.toLowerCase() === "g") gdToggle();
     if (e.key === "Delete" && S.editing) deletePages();
   }
