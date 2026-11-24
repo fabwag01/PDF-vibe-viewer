@@ -1,0 +1,20 @@
+{
+  "name": "PDF-vibe-viewer",
+  "short_name": "PDF-vibe",
+  "description": "PDFs ansehen, markieren und mit Notizen versehen",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#E4E8EE",
+  "theme_color": "#2D4FD3",
+  "lang": "de",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" }
+  ],
+  "file_handlers": [
+    { "action": "./index.html", "accept": { "application/pdf": [".pdf"] } }
+  ]
+}
