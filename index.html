@@ -7,7 +7,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="PDF-vibe-viewer">
-<meta name="theme-color" content="#2D4FD3">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1C2028" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -399,6 +400,18 @@ code.cp{display:block;background:var(--surface-2);border-radius:8px;padding:8px 
 [data-look="glass"] .empty{border-color:var(--glass-edge);border-radius:20px}
 @media (max-width:900px){
   [data-look="glass"] #side{position:absolute;margin:0;top:calc(var(--hdr-h,112px) + 20px);bottom:12px;left:max(10px,env(safe-area-inset-left,0px))}
+}
+/* Touch (iPad): obere Leiste mit mehr Abstand zum Bildschirmrand und größeren Zielen */
+@media (pointer:coarse){
+  .bar{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  header .row:first-child{min-height:56px;padding-block:8px;gap:8px}
+  .row + .row{padding-block:6px}
+  [data-look="glass"] .bar{top:14px;padding-left:16px;padding-right:16px;border-radius:28px}
+}
+/* Als Web-App vom Home-Bildschirm: Abstand zur Statusleiste bzw. zu den Fenstersymbolen von iPadOS */
+@media (display-mode:standalone){
+  header.bar{padding-top:max(6px,env(safe-area-inset-top,0px))}
+  [data-look="glass"] header.bar{padding-top:0;top:calc(14px + env(safe-area-inset-top,0px))}
 }
 @media (max-width:900px){
   .op .lbl-op{display:none} .op input{width:88px} .opts{gap:4px} .tool{width:40px}
@@ -2653,9 +2666,18 @@ $("#bSaveMenu").onclick = e => openMenu(e.currentTarget, [
 function setLook(look, announce) {
   document.documentElement.dataset.look = look;
   $("#bLook").classList.toggle("on", look === "glass");
-  store.set("look", look); measureHeader();
+  store.set("look", look); measureHeader(); syncThemeColor();
   if (announce) toast(look === "glass" ? "Glas-Design eingeschaltet." : "Standard-Design eingeschaltet.");
 }
+// Statusleiste des Geräts (theme-color) in der Farbe der Oberfläche: weiß/dunkel bzw. Glas-Hintergrund
+function syncThemeColor() {
+  const dark = document.documentElement.dataset.theme === "dark" || (document.documentElement.dataset.theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+  const glass = document.documentElement.dataset.look === "glass";
+  const col = glass ? (dark ? "#0C0F15" : "#E7ECF4") : (dark ? "#1C2028" : "#FFFFFF");
+  $$('meta[name="theme-color"]').forEach(m => m.remove());
+  const m = document.createElement("meta"); m.name = "theme-color"; m.content = col; document.head.append(m);
+}
+try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", syncThemeColor); } catch {}
 function measureHeader() {
   const h = $("header.bar").offsetHeight;
   if (h) document.documentElement.style.setProperty("--hdr-h", h + "px");
