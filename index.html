@@ -266,8 +266,6 @@ header .row:first-child > .spacer{flex-shrink:1;min-width:4px}
 .fav.add b{color:var(--accent);font-weight:500}
 .star,.fav-on svg,[data-fav].on svg{color:#D99A00}
 .home-foot{margin:0;color:var(--muted);font-size:13px}
-.pal .tool.once{position:relative}
-.pal .tool.once::after{content:"1";position:absolute;right:2px;bottom:2px;min-width:13px;height:13px;border-radius:7px;background:var(--accent);color:#fff;font:700 9px/13px system-ui,sans-serif;text-align:center;padding:0 2px}
 .at-home #palette,.at-home #optPop,.at-home #bSide,.at-home .split,.at-home #bPenOnly,.at-home .grp,.at-home .sep,.at-home #side{display:none!important}
 .at-home #viewport{visibility:hidden}
 #bHome.on{background:var(--accent-soft);color:var(--accent)}
@@ -669,7 +667,6 @@ const S = {
   eraser: { w: 14 },
   penOnly: store.get("penOnly", false),
   penSeen: false,
-  eraserOnce: store.get("eraserOnce", true) !== false, returnTool: null,
   scale: 1.2, cur: 0, dirty: false,
   undo: [], redo: [], editing: false, sel: new Set(), home: false
 };
@@ -1089,10 +1086,6 @@ viewport.addEventListener("pointerdown", e => {
     touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
     // Handballen beim Schreiben: Ein laufender Stiftstrich hat Vorrang, Berührungen werden ignoriert
     if (G && G.pen) return;
-    // Handballen erkennen: große Auflagefläche, oder ein einzelner Finger direkt nach einem Stiftstrich
-    if (Math.max(e.width || 0, e.height || 0) > 50 || (S.penSeen && touches.size === 1 && performance.now() - (S.lastPenUp || 0) < 350)) {
-      touches.delete(e.pointerId); return;
-    }
     // Geodreieck: ein Finger verschiebt, zwei Finger drehen
     if (touches.size === 2 && G && G.type === "geo") { startGeo2(); return; }
     if (touches.size === 1 && gdHit(e.clientX, e.clientY)) { startGeo(e, gdHit(e.clientX, e.clientY)); return; }
@@ -1203,7 +1196,6 @@ function endPointer(e) {
   if (g.type === "draw") {
     clearTimeout(holdT);
     const v = views.get(g.p.uid); const lc = v.liveC.getContext("2d"); lc.setTransform(1, 0, 0, 1, 0, 0); lc.clearRect(0, 0, v.liveC.width, v.liveC.height);
-    if (g.pen) S.lastPenUp = performance.now();
     if (e.type === "pointercancel" && !(g.pen && g.s.p.length >= 6)) return;
     if (g.rule && g.s.p.length < 6) return;
     // Ende genau dort, wo der Stift abgehoben wurde (die Glättung hinkt minimal nach)
@@ -1215,8 +1207,6 @@ function endPointer(e) {
     pushUndo(); g.p.strokes.push(g.s); drawInk(g.p); setDirty(true); thumbDirty(g.p);
   } else if (g.type === "erase") {
     if (g.hit) { pushUndo(g.snap); setDirty(true); thumbDirty(g.p); }
-    // Radierer „einmal“: nach dem Abheben zurück zum vorherigen Stift
-    if (S.tool === "eraser" && S.returnTool && e.type !== "pointercancel") { const t = S.returnTool; S.returnTool = null; setTool(t); }
   } else if (g.type === "tap") {
     if (Math.hypot(e.clientX - g.x0, e.clientY - g.y0) < 8 && !S.skipNoteTap) createNote(g.p, g.pt[0], g.pt[1]);
   }
@@ -2693,10 +2683,6 @@ function renderOpts() {
       b.innerHTML = `<span style="height:${6 + i * 4}px;width:${6 + i * 4}px;border-radius:50%"></span>`;
       b.onclick = () => { S.eraser.w = w; renderOpts(); }; o.append(b);
     });
-    const b = el("button", "chip" + (S.eraserOnce ? " on" : "")); b.id = "chipEraserOnce";
-    b.innerHTML = (S.eraserOnce ? svg("check", 14) : "") + "<span>Nach dem Radieren zurück zum Stift</span>";
-    b.onclick = () => { S.eraserOnce = !S.eraserOnce; store.set("eraserOnce", S.eraserOnce); if (!S.eraserOnce) { S.returnTool = null; setTool("eraser"); } renderOpts(); };
-    pop.append(b); hint("Radierer einmal antippen: ein Strich radieren, dann geht es mit dem Stift weiter. Zweimal antippen: Radierer bleibt aktiv.");
   } else if (t === "measure") {
     [["len", "measure", "Länge messen"], ["ang", "angle", "Winkel messen"]].forEach(([k, ic, lbl]) => {
       const b = el("button", "tool ic" + (MEAS.mode === k ? " on" : "")); b.dataset.m = k; b.title = lbl; b.setAttribute("aria-label", lbl); b.setAttribute("aria-pressed", MEAS.mode === k);
@@ -2815,18 +2801,9 @@ function showPalHint(t) {
   try { new ResizeObserver(() => placePalette()).observe(pal); new ResizeObserver(() => placePalette()).observe(viewport); } catch {}
   addEventListener("resize", () => placePalette());
 })();
-function setTool(t, fromUser) {
-  if (t !== S.tool) { MEAS.cur = null; measRender(); }
-  if (t === "eraser" && fromUser) {
-    // Radierer antippen: einmal radieren, dann zurück zum Stift/Textmarker. Nochmal antippen: Radierer bleibt.
-    if (S.tool === "eraser") S.returnTool = null;
-    else S.returnTool = S.eraserOnce && ["pen", "hl"].includes(S.tool) ? S.tool : null;
-  } else if (t !== "eraser") S.returnTool = null;
-  S.tool = t; updateChrome();
-  const eb = $('.tool[data-tool="eraser"]'); if (eb) { eb.classList.toggle("once", S.tool === "eraser" && !!S.returnTool); eb.title = S.tool === "eraser" && S.returnTool ? "Radierer – einmal (nochmal tippen: bleibt aktiv)" : "Radierer (E)"; }
-}
+function setTool(t) { if (t !== S.tool) { MEAS.cur = null; measRender(); } S.tool = t; updateChrome(); }
 
-$$(".tool[data-tool]").forEach(b => b.onclick = () => setTool(b.dataset.tool, true));
+$$(".tool[data-tool]").forEach(b => b.onclick = () => setTool(b.dataset.tool));
 $("#bGeo").onclick = () => { gdToggle(); $("#bGeo").setAttribute("aria-pressed", GD.on); };
 $("#gRotL").onclick = () => gdRotateBy(-15); $("#gRotR").onclick = () => gdRotateBy(15);
 $("#gZero").onclick = () => { GD.ang = 0; gdRender(); };
@@ -2917,7 +2894,7 @@ document.addEventListener("keydown", e => {
   else if (mod && e.key === "-") { e.preventDefault(); setScale(S.scale / 1.2); }
   else if (!mod && !e.altKey) {
     const m = { v: "hand", p: "pen", h: "hl", e: "eraser", t: "text", m: "measure" }[e.key.toLowerCase()];
-    if (m) setTool(m, true);
+    if (m) setTool(m);
     if (e.key.toLowerCase() === "g") gdToggle();
     if (e.key === "Delete" && S.editing) deletePages();
   }
