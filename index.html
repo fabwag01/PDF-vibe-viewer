@@ -1647,19 +1647,37 @@ function panEnd(g, e) {
   momentum = requestAnimationFrame(step);
 }
 function center() { const [a, b] = [...touches.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) }; }
-function startPinch() { const c = center(); G = { type: "pinch", d0: c.d || 1, s0: S.scale, c }; }
+function startPinch() { const c = center(); G = { type: "pinch", d0: c.d || 1, s0: S.scale, c, a: zoomAnchor(c.x, c.y) }; }
 function updatePinch() {
   const c = center();
-  setScale(G.s0 * c.d / G.d0, c.x, c.y, true);
-  viewport.scrollLeft -= c.x - G.c.x; viewport.scrollTop -= c.y - G.c.y; G.c = c;
+  // Die Stelle der Seite, die zu Beginn zwischen den Fingern lag, bleibt zwischen den Fingern (auch beim Verschieben)
+  setScale(G.s0 * c.d / G.d0, c.x, c.y, true, G.a); G.c = c;
 }
-function setScale(ns, cx, cy, live) {
-  ns = clamp(ns, 0.35, 6); if (Math.abs(ns - S.scale) < 1e-4) return;
+// Ankerpunkt: Seite unter (cx, cy) und Position darauf in Seiten-Einheiten (unabhängig vom Zoom)
+function zoomAnchor(cx, cy) {
+  let best = null, bd = Infinity;
+  for (const p of S.pages) {
+    const v = views.get(p.uid); if (!v) continue;
+    const r = v.el.getBoundingClientRect();
+    const d = Math.hypot(Math.max(r.left - cx, 0, cx - r.right), Math.max(r.top - cy, 0, cy - r.bottom));
+    if (d < bd) { bd = d; best = { uid: p.uid, u: (cx - r.left) / S.scale, v: (cy - r.top) / S.scale }; }
+    if (d === 0) break;
+  }
+  return best;
+}
+function setScale(ns, cx, cy, live, anchor) {
+  ns = clamp(ns, 0.35, 6);
   const vr = viewport.getBoundingClientRect();
-  const ax = (cx ?? vr.left + vr.width / 2) - vr.left, ay = (cy ?? vr.top + vr.height / 2) - vr.top;
-  const cxC = viewport.scrollLeft + ax, cyC = viewport.scrollTop + ay, r = ns / S.scale;
-  S.scale = ns; layout();
-  viewport.scrollLeft = cxC * r - ax; viewport.scrollTop = cyC * r - ay;
+  cx = cx ?? vr.left + vr.width / 2; cy = cy ?? vr.top + vr.height / 2;
+  const a = anchor || zoomAnchor(cx, cy);
+  if (Math.abs(ns - S.scale) > 1e-4) { S.scale = ns; layout(); }
+  const v = a && views.get(a.uid);
+  if (v) {
+    // nach dem Neuaufbau tatsächliche Lage der Seite messen und so scrollen, dass der Ankerpunkt unter (cx, cy) liegt
+    const r = v.el.getBoundingClientRect();
+    viewport.scrollLeft += r.left + a.u * S.scale - cx;
+    viewport.scrollTop += r.top + a.v * S.scale - cy;
+  }
   if (!live) scheduleRerender(); else { clearTimeout(rerenderT); rerenderT = setTimeout(() => S.pages.forEach(renderPage), 350); }
 }
 function fitScale() {
