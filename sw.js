@@ -1,7 +1,7 @@
 /* PDF-vibe-viewer – Offline-Speicher (Service Worker)
    Legt alle Dateien der App beim ersten Öffnen ab und liefert sie danach ohne Internet aus.
    Neue Versionen werden beim nächsten Öffnen mit Internet automatisch geladen. */
-const VERSION = "ad823ecaf2fc";
+const VERSION = "b3d5f3eae87a";
 const CACHE = "pdfvv-" + VERSION;
 const FILES = [
   "./",

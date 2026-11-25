@@ -34,7 +34,7 @@
 
 *,*::before,*::after{box-sizing:border-box}
 html,body{height:100%}
-body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:14px;overflow:hidden;touch-action:manipulation;
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:14px;overflow:hidden;touch-action:pan-x pan-y;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 button{font:inherit;color:inherit}
 #app{height:100%;display:flex;flex-direction:column}
@@ -548,7 +548,7 @@ code.cp{display:block;background:var(--surface-2);border-radius:8px;padding:8px 
         </div>
         <section><div class="h2row"><h2>Zuletzt geöffnet</h2><button class="lnk" id="hClear">Liste leeren</button></div><div id="recentGrid" class="recent-grid"></div></section>
         <section><div class="h2row"><h2>Favoriten-Ordner</h2></div><div id="favList" class="fav-list"></div></section>
-        <p class="home-foot">Zum Ausprobieren: <button class="lnk" id="hSample">Beispiel-PDF öffnen</button></p>
+        <p class="home-foot">Zum Ausprobieren: <button class="lnk" id="hSample">Beispiel-PDF öffnen</button> · <span id="appVer"></span></p>
       </div>
     </section>
     <div id="geoPanel" role="toolbar" aria-label="Geodreieck">
@@ -673,7 +673,9 @@ const S = {
 const total = p => ((p.baseRot + p.rot) % 360 + 360) % 360;
 const dims = p => (total(p) % 180 === 0 ? [p.w0, p.h0] : [p.h0, p.w0]);
 
+const APP_VERSION = "1.3.2";
 const viewport = $("#viewport"), pagesEl = $("#pages"), appEl = $("#app");
+$("#appVer").textContent = "Version " + APP_VERSION;
 const views = new Map();       // uid -> {el, pdfC, hlC, inkC, liveC, notesEl, key, task, visible}
 
 /* ---------- Toasts, Dialoge, Busy ---------- */
@@ -1186,7 +1188,14 @@ viewport.addEventListener("pointermove", e => {
 function endPointer(e) {
   touches.delete(e.pointerId);
   if (!G) return;
-  if (G.type === "pinch") { if (touches.size < 2) { G = null; scheduleRerender(); } return; }
+  if (G.type === "pinch") {
+    if (touches.size < 2) {
+      const g = G; G = null; endPinch(g);
+      const rest = [...touches.entries()][0];
+      if (rest && e.type !== "pointercancel") startPan({ pointerId: rest[0], clientX: rest[1].x, clientY: rest[1].y, target: viewport });
+    }
+    return;
+  }
   if (G.type === "geo2") { if (touches.size < 2) G = null; return; }
   if (G.id !== e.pointerId) return;
   const g = G; G = null;
@@ -1622,11 +1631,13 @@ function commitMeasure(m) {
 
 /* ---------- Scrollen & Zoomen per Finger ---------- */
 function startPan(e) {
-  G = { type: "pan", id: e.pointerId, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: performance.now(), hist: [], target: e.target };
+  G = { type: "pan", id: e.pointerId, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: performance.now(), hist: [], target: e.target,
+        sl0: viewport.scrollLeft, st0: viewport.scrollTop };
   try { viewport.setPointerCapture(e.pointerId); } catch {}
 }
 function panMove(e) {
-  viewport.scrollLeft -= e.clientX - G.x; viewport.scrollTop -= e.clientY - G.y;
+  // absolut zum Startpunkt: das Blatt bleibt exakt unter dem Finger (Safari rundet Scroll-Werte bei jedem Schritt)
+  viewport.scrollLeft = G.sl0 - (e.clientX - G.x0); viewport.scrollTop = G.st0 - (e.clientY - G.y0);
   G.x = e.clientX; G.y = e.clientY;
   const now = performance.now(); G.hist.push([now, e.clientX, e.clientY]); while (G.hist.length && now - G.hist[0][0] > 90) G.hist.shift();
 }
@@ -1647,20 +1658,43 @@ function panEnd(g, e) {
   momentum = requestAnimationFrame(step);
 }
 function center() { const [a, b] = [...touches.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) }; }
-function startPinch() { const c = center(); G = { type: "pinch", d0: c.d || 1, s0: S.scale, c, a: zoomAnchor(c.x, c.y) }; }
+// Zwei-Finger-Zoom wie in nativen Apps: Während der Geste wird das Blatt nur per GPU-Transformation skaliert und
+// verschoben (exakt synchron zu den Fingern, ohne Neuaufbau). Beim Loslassen wird einmal sauber neu aufgebaut.
+let pinchSpacer = null;
+function startPinch() {
+  cancelAnimationFrame(momentum);
+  const c = center(), r0 = pagesEl.getBoundingClientRect();
+  G = { type: "pinch", d0: c.d || 1, s0: S.scale, c0: c, c, k: 1, r0, px: c.x - r0.left, py: c.y - r0.top };
+  // Platzhalter hält die Scrollfläche, damit das Herauszoomen die Scrollposition nicht verschiebt
+  if (!pinchSpacer) { pinchSpacer = document.createElement("div"); pinchSpacer.style.cssText = "position:absolute;left:0;top:0;width:1px;height:1px;pointer-events:none;visibility:hidden"; }
+  pinchSpacer.style.width = viewport.scrollWidth + "px"; pinchSpacer.style.height = viewport.scrollHeight + "px"; viewport.append(pinchSpacer);
+  pagesEl.style.transformOrigin = "0 0"; pagesEl.style.willChange = "transform";
+  clearTimeout(rerenderT);
+}
 function updatePinch() {
-  const c = center();
-  // Die Stelle der Seite, die zu Beginn zwischen den Fingern lag, bleibt zwischen den Fingern (auch beim Verschieben)
-  setScale(G.s0 * c.d / G.d0, c.x, c.y, true, G.a); G.c = c;
+  const c = center(); G.c = c;
+  G.k = clamp(G.s0 * c.d / G.d0, 0.35, 6) / G.s0;
+  // Der Punkt, der zu Beginn zwischen den Fingern lag, folgt der Fingermitte
+  const tx = c.x - G.r0.left - G.px * G.k, ty = c.y - G.r0.top - G.py * G.k;
+  pagesEl.style.transform = `translate(${tx}px,${ty}px) scale(${G.k})`;
+}
+function endPinch(g) {
+  const c = g.c, a = zoomAnchor(c.x, c.y, g.s0 * g.k);   // Ankerpunkt noch auf dem transformierten Blatt messen
+  pagesEl.style.transform = ""; pagesEl.style.willChange = "";
+  S.scale = g.s0 * g.k; layout();
+  if (pinchSpacer) pinchSpacer.remove();
+  const v = a && views.get(a.uid);
+  if (v) { const r = v.el.getBoundingClientRect(); viewport.scrollLeft += r.left + a.u * S.scale - c.x; viewport.scrollTop += r.top + a.v * S.scale - c.y; }
+  scheduleRerender();
 }
 // Ankerpunkt: Seite unter (cx, cy) und Position darauf in Seiten-Einheiten (unabhängig vom Zoom)
-function zoomAnchor(cx, cy) {
+function zoomAnchor(cx, cy, sc = S.scale) {
   let best = null, bd = Infinity;
   for (const p of S.pages) {
     const v = views.get(p.uid); if (!v) continue;
     const r = v.el.getBoundingClientRect();
     const d = Math.hypot(Math.max(r.left - cx, 0, cx - r.right), Math.max(r.top - cy, 0, cy - r.bottom));
-    if (d < bd) { bd = d; best = { uid: p.uid, u: (cx - r.left) / S.scale, v: (cy - r.top) / S.scale }; }
+    if (d < bd) { bd = d; best = { uid: p.uid, u: (cx - r.left) / sc, v: (cy - r.top) / sc }; }
     if (d === 0) break;
   }
   return best;
@@ -2952,6 +2986,8 @@ function registerOffline() {
       w.addEventListener("statechange", () => {
         if (w.state !== "activated") return;
         S.offlineReady = true;
+        // Update: sofort neu laden, wenn nichts Ungespeichertes offen ist – sonst Hinweis
+        if (hadController && !S.dirty && (S.home || !S.pages.length)) { location.reload(); return; }
         toast(hadController ? "Update installiert. App schließen und neu öffnen, um es zu nutzen." : "Offline bereit: Die App startet jetzt auch ohne Internet.");
       });
     });
